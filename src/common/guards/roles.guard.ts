@@ -1,22 +1,26 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@prisma/client';
-import { ROLES_KEY } from '../decorator/roles.decorator.js';
+import { Role } from '../enums/index.js';
+import { ROLES_KEY } from '../decorators/roles.decorator.js';
+
+/**
+ * صارم: لا يوجد bypass للأدمن. إذا الـ endpoint بدو الأدمن لازم يتحط ADMIN صراحةً بـ @Roles.
+ * إذا ما في @Roles على الـ endpoint = أي مستخدم مسجّل دخوله.
+ */
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
+
   canActivate(context: ExecutionContext): boolean {
-    const roles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
-      context.getHandler(), 
+    const roles = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
+      context.getHandler(),
       context.getClass(),
     ]);
-    if (!roles) return true; 
-    const req= context.switchToHttp().getRequest();
-    const user=req.user;
-    if(user.role==Role.ADMIN){
-      return true;
+    if (!roles || roles.length === 0) return true;
+    const user = context.switchToHttp().getRequest().user;
+    if (!user || !roles.includes(user.role)) {
+      throw new ForbiddenException('You do not have permission to perform this action');
     }
-    
-    return roles.includes(user?.role);
+    return true;
   }
 }

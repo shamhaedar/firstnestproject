@@ -1,50 +1,46 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './prisma/prisma.module.js';
-import { AuthModule } from './auth/auth.module.js';
-import { UserModule } from './modules/user/user.module.js';
-import { ProgramModule } from './modules/program/program.module.js';
-import { AnnouncementModule } from './modules/announcement/announcement.module.js';
-import { ApplicationModule } from './modules/application/application.module.js';
-import { SessionModule } from './modules/session/session.module.js';
-import { MailModule } from './mail/mail.module.js';
-import { MaterialModule } from './modules/material/material.module.js';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AuthModule } from './auth/auth.module.js';
+import { AppCacheModule } from './common/cache/app-cache.module.js';
+import { UploadModule } from './common/upload/upload.module.js';
+import { ModulesModule } from './modules/modules.module.js';
+import { PrismaModule } from './prisma/prisma.module.js';
+import { SeedModule } from './seed/seed.module.js';
 
 @Module({
   imports: [
-    BullModule.forRoot({
-      connection: {
-        host: 'localhost',
-        port: 6379,
-      },
+    ConfigModule.forRoot({ isGlobal: true }),
+
+    // Rate limiting عام (الـ endpoints الحساسة كـ login إلها حد أشد داخل الـ controller)
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{ name: 'default', ttl: 60_000, limit: Number(config.get('THROTTLE_LIMIT') ?? 100) }],
+      }),
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100, 
-      },
-    ]),
-    ConfigModule.forRoot({
-      isGlobal: true,
+
+    // BullMQ على Redis (الإشعارات)
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get('REDIS_HOST') ?? '127.0.0.1',
+          port: Number(config.get('REDIS_PORT') ?? 6379),
+          password: config.get('REDIS_PASSWORD') || undefined,
+        },
+      }),
     }),
-    PrismaModule,     
-    AuthModule,      
-    UserModule,      
-    ProgramModule,   
-    AnnouncementModule, 
-    ApplicationModule,  
-    SessionModule, 
-    MaterialModule,    
-    SessionModule,    
-    MailModule,         
+
+    PrismaModule,
+    AppCacheModule,
+    UploadModule,
+    AuthModule,
+    ModulesModule,
+    SeedModule,
   ],
-  controllers: [],
-  providers: [{
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard, 
-    },],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

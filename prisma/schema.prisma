@@ -28,10 +28,10 @@ model User {
   phone        String?
   createdAt    DateTime @default(now())
 
-  programs      Program[]      @relation("SupervisorPrograms") 
-  applications  Application[]                                           
-  announcements Announcement[] 
-  sessions      Session[]                                 
+  programs      Program[]      @relation("SupervisorPrograms")
+  applications  Application[]
+  announcements Announcement[]
+  sessions      Session[]
 
   @@map("users")
 }
@@ -40,26 +40,26 @@ model Program {
   id             Int      @id @default(autoincrement())
   title          String
   description    String   @db.Text
-  imageUrl       String
+  imageUrl       String?
   totalSeats     Int
   availableSeats Int
-  supervisorId   Int      
+  supervisorId   Int
   createdAt      DateTime @default(now())
 
   supervisor     User          @relation("SupervisorPrograms", fields: [supervisorId], references: [id], onDelete: Restrict)
-  courseSessions CourseSession[]      
-  applications   Application[]  
-  materials      Material[]     
-  announcements  Announcement[] 
+  courseSessions CourseSession[]
+  applications   Application[]
+  materials      Material[]
+  announcements  Announcement[]
 
   @@map("programs")
 }
 
 model CourseSession {
   id             Int      @id @default(autoincrement())
-  programId      Int     
+  programId      Int
   date           DateTime
-  time           DateTime   
+  time           DateTime
   locationOrLink String
 
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -83,9 +83,9 @@ model Session {
 
 model Application {
   id        Int               @id @default(autoincrement())
-  userId    Int               
-  programId Int              
-  cvUrl     String
+  userId    Int
+  programId Int
+  cvUrl     String?
   status    ApplicationStatus @default(PENDING)
   appliedAt DateTime          @default(now())
 
@@ -98,7 +98,7 @@ model Application {
 
 model Material {
   id        Int      @id @default(autoincrement())
-  programId Int      
+  programId Int
   title     String
   fileUrl   String
   uploadedAt DateTime @default(now())
@@ -113,8 +113,8 @@ model Announcement {
   title     String
   content   String   @db.Text
   isGeneral Boolean  @default(false)
-  programId Int?     
-  authorId  Int     
+  programId Int?
+  authorId  Int
   createdAt DateTime @default(now())
 
   program Program? @relation(fields: [programId], references: [id], onDelete: Cascade)

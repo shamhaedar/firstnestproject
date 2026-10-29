@@ -1,25 +1,23 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { Role } from '@prisma/client';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterDto {
-  @IsNotEmpty({ message:'write your full name' })
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   fullName: string;
 
-  @IsNotEmpty({ message: 'write your email' })
   @IsEmail()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   email: string;
 
-  @IsNotEmpty({ message: 'write your password' })
-  @MinLength(6, { message:'password must be at least 6 characters long' })
   @IsString()
+  @MinLength(8)
+  @MaxLength(72) // حد bcrypt
   password: string;
 
   @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
-
-  @IsOptional()
-  @IsString()
+  @Matches(/^\+?[0-9]{7,15}$/, { message: 'phone must be 7-15 digits, optional leading +' })
   phone?: string;
 }
